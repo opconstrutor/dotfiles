@@ -1,0 +1,178 @@
+## Instalando ArchLinux de maneira simples, sem script 'archinstall'
+## com interface gráfica e bootloader 'systemd'. Configurações a título de
+## exemplo serão sinalizadas com '§' sendo assim, quando utilizarmos esse símbolo
+## busque pela configuração necessária para sua máquina, ou tente a sugerida no tutorial.
+
+# Download da distro oficial pelo endereço:
+    https://archlinux.org/download/
+
+# Download da ferramenta Ventoy (distros diferentes) para gerar pendrive bootável:
+    https://www.ventoy.net/en/download.html
+
+# Criar pendrive bootável (exclui e formata tudo) e copiar a imagem baixada do archlinux para dentro.
+
+# Desabilitar segurança do boot da sua máquina, utilize F2 ou a tecla de configurações de boot da sua
+  máquina durante a inicialização para entrar no modo de controle de boot do computador.
+
+# Realize o boot com o pendrive conectado, utilizando F2 entre nas opções de boot e selecione o nome
+  que denomina seu pendrive bootável, salve as alterações e inicie o boot pelo pendrive.
+
+# Ta tela irá aparecer o nome da imagem do arch copiada anteriormente, selecione com ENTER e selecione
+  também a primeira opção da próxima tela. (Arch linux (x86_64))
+
+## Estando na tela inicial do ArchLinux, iremos agora configurar algumas coisas básicas do sitema:
+
+   # Configurações de teclado
+         localectl list-keymaps                      # lista possíveis configurações de teclado
+       § localectl set-keymap --no-convert br-abnt2  # seleciona o teclado brasileiro
+
+   # Configuração de modo do boot
+         ls /sys/firmware/efi/efivars/               # modo de boot, sem errors EUFI, contrário BIOS (ou CSM)
+
+   # Configurações de rede WIFI
+         iwctl station list                          # lista dispositivos de conexão wifi disponíveis
+       § iwctl station wlan0 get-networks            # lista redes wifi disponíveis
+       § iwctl station wlan0 connect Nome_Rede       # solicita senha para conexão da rede, caso tenha
+         ping archlinux.org                          # teste de conexão
+
+   # Configuração para relógio do sistema
+         timedatectl status                          # verifica o relógio utiizado atual
+         timedatectl list-timezones                  # possíveis timezones a serem utilizados
+       § timedatectl set-timezone America/Sao_Paulo  # utiliza o horário de São Paulo como base do sistema
+
+## Configurações de Partição de Disco, "quando reconhecidos pelo sistema 'live', discos são atribuídos a um
+   dispositivo de bloco tal como /dev/sda, /dev/nvme0n1 ou /dev/mmcblk0". Partições mínimas: diretório raiz
+   partição de sistema EUFI.
+
+        lsblk -l ou fdisk -l                        # identificar dispositivos de bloco
+
+   # Partições poderão ser geradas através dos programas fdisk (puramente linha de comando) ou cfdisk (interface
+     simplificada para o fdisk). Nesse tutorial iremos utilizar a instalação pelo cfdisk por considerar mais
+     simples para iniciantes.
+
+   # Simularemos as opções a serem selecionadas para o particionamento básico de um boot UEFI
+
+      § cfdisk /dev/sda                             # nosso dispositivo de bloco
+        § L¬> NEW   ¬> 512M ¬> TYPE ¬> EFI System                              (mais que 300M, sda1, BOOT)
+        § L¬> NEW   ¬>  23G ¬> TYPE ¬> Linux File System                       (23G - 32G, sda2, root '/')
+        § L¬> NEW   ¬>   2G ¬> TYPE ¬> Linux SWAP                              (mais que 500M, sda3, SWAP)
+        § L¬> NEW   ¬> Restante do dispositivo ¬> TYPE ¬> Linux Filesystem     ('/home', sda4)
+          L¬> WRITE ¬> yes
+          L¬> QUIT
+
+## Configurações de Formatação de partições,
+
+   § mkfs.fat -F32 /dev/sda1                        # formatação FAT 32 da partição de BOOT
+   § mkfs.ext4 /dev/sda2                            # formatação EXT4 da partição ROOT
+   § mkfs.ext4 /dev/sda4                            # formatação EXT4 da partição HOME
+   § mkswap /dev/sda3                               # gera swap da partição sda3
+
+## Montar sistema de arquivos, "monte o volume raíz em '/mnt' e crie quaisquer pontos de montagem restantes
+   (tal como /mnt/boot) e monte os volumes na ordem hierárquica correspondente".
+
+     mount /dev/sda3 /mnt                           # utiliza a partição raíz (root) para a base do sistema
+     mount --mkdir /dev/sda1 /mnt/boot              # cria e monta diretória de boot para o sistema EFI
+     mount --mkdir /dev/sda4 /mnt/home              # cria e monta diretório '/home'
+     swapon /dev/sda2                               # habilita a partição de SWAP
+
+## Atualizando os 'mirrors' para download de pacotes essencias do sistema a ser instalado
+
+   § reflector -c "Brazil" > /etc/pacman.d/mirrorlist # atualiza os 'espelhos' de acordo com taxa de download
+   § vim /etc/pacman.conf                             # descomente 'multilib' e 'Paralel download = 5'
+
+   # Utilize o script pacstrap para instalar os pacotes básicos na montagem do nosso sistema
+   § pacstrap -K /mnt base base-devel linux linux-firmware intel-ucode sudo sof-firmware networkmanager (ou netcti) wpa_supplicant vim man-db man-pages texinfo
+
+     genfstab -U /mnt >> /mnt/etc/fstab              # gera arquivo de configuração 'fstab'
+     cat /mnt/etc/fstab                                 # consulte se as informações estão corretas, caso hajam erros edite o arquivo
+
+## Configurações básicas para o novo sistema:
+
+    arch-chroot /mnt                                             # altera para o sistema recém criado
+  § ln -sf /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime  # seleciona o fuso horário de São Paulo
+    hwclock --systohc                                            # gera arquivo de configuração /etc/adjtime
+  § vim /etc/locale.gen                                          # descomente 'pt_BR.UTF-8 UTF-8'
+    locale-gen                                                   # gera configuração com linguagem do locale selecionado
+  § echo 'LANG=pt_BR.UTF-8' > /etc/locale.conf                   # define adequadamente a variável de linguagem
+  § echo 'KEYMAP=br-abnt2' > /etc/vconsole.conf                  # define layout do teclado do console
+    sudo pacman -Syyu                                            # atualização de pacotes
+    sudo pacman -S xorg-server xorg-server-utils xorg-xinit mesa xf86-input-synaptics
+    sudo pacman -S xf86-video=intel intel-dri lib32-intel-dri libva-intel-driver libva
+
+## Configuração de rede sem fio para o novo sistema
+
+  § echo 'meuhostname' > /etc/hostname                           # selecione o nome do host para sua máquina
+
+    # resolução de hostname local, utilize o texto sem as áspas
+
+        vim /etc/hosts
+            "127.0.0.1       localhost
+             ::1             localhost
+             127.0.1.1       meuhostname.localdomain     meuhostname"
+
+    getent hosts                                    # verificação das entradas
+    lspci -k | grep Network                         # verifica o status do drive
+    ip link (ou iwconfig)                           # verifica a existência de uma interface sem fio
+  § ip link set dev wlan0 up                        # geralmente o nome começa por 'w', como em wlan0 ou wlp2s0
+    dmesg | grep firmware (ou iwlwifi)              # verifica mensagens de kernel sendo carregadas para o firmware, em casos de erro acesse:
+                                                    https://wiki.archlinux.org/title/Network_configuration_(Portugu%C3%AAs)/Wireless_(Portugu%C3%AAs)#Instalar_driver/firmware
+    iwlist wlan0 scan | grep ESSID                  # verfica o nome das redes wifi disponíveis para conexão
+
+    # conexão utilizando o wpa_supplicant, gera o arquivo de configuração 'wpa_supplicant.config':
+  § wpa_passphrase Nome_Rede_ESSID senha12345* | tee -a /etc/wpa_supplicant/wpa_supplicant.conf     # em caso de espaço entre as palavras utilize áspas duplas
+  § wpa_supplicant -B -c /etc/wpa_supplicant/wpa_supplicant.conf -i wlan0
+    iwconfig                                                                                        # verifique se o ESSID da sua rede aparece na tela
+  § dhclient wlan0                                                                                  # gera endereço de IP privado do servidor DHCP
+  § ip addr show wlan0                                                                              # verifica endereço de IP
+  § dhclient wlan0 -r                                                                               # para liberar o IP do privado
+
+    # conexão automática após realizar o boot
+    cp /lib/systemd/system/wpa_supplicant.service /etc/systemd/system/wpa_supplicant.service
+    vim /etc/systemd/system/wpa_supplicant.service  # busque por '/ExecStart' altere da seguinte maneira:
+     § "ExecStart=/sbin/wpa_supplicant -u -s -c /etc/wpa_supplicant/wpa_supplicant.conf -i wlan0
+        Restart=always"
+    systemctl daemon-reload
+    systemctl enable wpa_supplicant.service
+
+    # Habilitando IP privado para o boot
+    vim /etc/systemd/system/dhclient.service
+       "[Unit]
+        Description= DHCP Client
+        Before=network.target
+        After=wpa_supplicant.service
+
+        [Service]
+        Type=forking
+      § ExecStart=/sbin/dhclient wlan0 -v
+      § ExecStop=/sbin/dhclient wlan0 -r
+        Restart=always
+
+        [Install]
+        WantedBy=multi-user.target"
+    systemctl enable dhclient.service
+
+## Configurações de administração e usuários
+    passwd                                      # configura senha root
+  § useradd -m -g users -G wheel,storage,power -s /bin/bash nomeusuario             # adiciona um usuário
+  $ passwd nomeusuario                          # adiciona senha de acesso para o usuário
+    visudo /etc/sudoers                         # descomente a linha "%wheel ALL=(ALL) ALL"
+
+## Configurações de BOOT com o systemd e finalizando instalação
+    bootctl install                             # copia arquivos de configuração para a partição separa para o sistema EFI
+    blkid /dev/sda2                             # encontrar UUID para /dev/sda2, copie a seguinte linha 'PARTUUID='
+    vim /boot/loader/entries/arch.conf          # alterações para o uso de microcodes da Intel
+       "title Arch Linux
+        linux /vmlinuz-linux
+        initrd /intel-ucode.img
+        initrd /initramfs-linux.img"
+        options root=PARTUUID=UUIDcopiadoaposcomandoblkid rw
+    vim /boot/loader/loader.conf
+       "default arch.conf
+        timeout 3
+        console-mode max
+        editor no"
+    bootctl --path=/boot update
+    exit
+    unmount -R /mnt
+    reboot
+
