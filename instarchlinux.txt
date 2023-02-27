@@ -70,10 +70,10 @@
 ## Montar sistema de arquivos, "monte o volume raíz em '/mnt' e crie quaisquer pontos de montagem restantes
    (tal como /mnt/boot) e monte os volumes na ordem hierárquica correspondente".
 
-     mount /dev/sda3 /mnt                           # utiliza a partição raíz (root) para a base do sistema
+     mount /dev/sda2 /mnt                           # utiliza a partição raíz (root) para a base do sistema
      mount --mkdir /dev/sda1 /mnt/boot              # cria e monta diretória de boot para o sistema EFI
      mount --mkdir /dev/sda4 /mnt/home              # cria e monta diretório '/home'
-     swapon /dev/sda2                               # habilita a partição de SWAP
+     swapon /dev/sda3                               # habilita a partição de SWAP
 
 ## Atualizando os 'mirrors' para download de pacotes essencias do sistema a ser instalado
 
@@ -81,10 +81,10 @@
    § vim /etc/pacman.conf                             # descomente 'multilib' e 'Paralel download = 5'
 
    # Utilize o script pacstrap para instalar os pacotes básicos na montagem do nosso sistema
-   § pacstrap -K /mnt base base-devel linux linux-firmware intel-ucode sudo sof-firmware networkmanager (ou netcti) wpa_supplicant vim man-db man-pages texinfo
+   § pacstrap -K /mnt base base-devel linux linux-firmware iw dhclient intel-ucode sudo sof-firmware networkmanager wpa_supplicant vim man-db man-pages texinfo
 
      genfstab -U /mnt >> /mnt/etc/fstab              # gera arquivo de configuração 'fstab'
-     cat /mnt/etc/fstab                                 # consulte se as informações estão corretas, caso hajam erros edite o arquivo
+     cat /mnt/etc/fstab                              # consulte se as informações estão corretas, caso hajam erros edite o arquivo
 
 ## Configurações básicas para o novo sistema:
 
@@ -101,7 +101,7 @@
 
 ## Configuração de rede sem fio para o novo sistema
 
-  § echo 'meuhostname' > /etc/hostname                           # selecione o nome do host para sua máquina
+  § echo 'meuhostname' > /etc/hostname              # selecione o nome do host para sua máquina
 
     # resolução de hostname local, utilize o texto sem as áspas
 
@@ -175,4 +175,21 @@
     exit
     unmount -R /mnt
     reboot
+
+## Pacotes úteis pós instalação, configuração do i3-wm, áudio, vídeo, firewall, dentre outros.
+
+sudo pacman -Syyu                      # Atualiza pacotes antes de realizar downloads
+sudo pacman -S ufw i3-wm alacritty git npm vlc ranger pulseaudio pulseaudio-ctl(ou pavucontrol) brigthnessctl cbatticon picom
+sudo pacman -Sc ; sudo reboot          # Remove pacotes desnecessários e reboota
+
+# Configuração simples do firewall, bloqueia solicitações de entrada para sua máquina
+sudo ufw default deny incoming
+sudo ufw enable
+
+# Habilitando downloads dos repositórios aur (Arch User Repository) com o YAY
+cd /tmp ; git clone https://aur.archlinux.org/yay.git ; cd yay ; makepkg -si
+
+# Atualizando tema do terminal Alacritty
+npm i -g alacritty-themes
+alacritty-themes --create ; alacritty-themes (somente ou seguido pelo nome do tema)
 

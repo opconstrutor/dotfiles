@@ -1,0 +1,77 @@
+# Configuration for Alacritty, the GPU enhanced terminal emulator.
+
+# Any items in the `env` entry below will be added as
+# environment variables. Some entries may override variables
+# set by alacritty itself.
+ 
+env:
+  TERM: alacritty
+  LANG: "pt_BR.UTF-8"
+  LC_CTYPE: pt_BR.UTF-8
+
+window:
+  startup_mode: Maximized
+  padding:
+    x: 0
+    y: 0
+
+  dynamic_padding: false
+
+  decorations: none
+
+  scrolling:
+    history: 3000
+    multiplier: 5
+
+font:
+  normal:
+    family: "monospace"
+    style: Regular
+
+  bold:
+    family: monospace
+    style: Bold
+
+  italic:
+    family: monospace
+    style: Italic
+    bold_italic:
+
+  size: 7.5
+  offset:
+    x: 0
+    y: 0
+
+  glyph_offset:
+    x: 0
+    y: 0
+
+# Colors (Tomorrow Night Bright)
+colors:
+  name: astromouse
+  author: ""
+  primary:
+    background: "#000000"
+    foreground: "#ffffff"
+  cursor:
+    text: "#000000"
+    cursor: "#ffffff"
+  normal:
+    black: "#1c1c1c"
+    red: "#d770af"
+    green: "#9acc79"
+    yellow: "#d0d26b"
+    blue: "#77b6c5"
+    magenta: "#a488d9"
+    cyan: "#7fcab3"
+    white: "#8d8d8d"
+  bright:
+    black: "#3d3a3a"
+    red: "#d28abf"
+    green: "#8fb676"
+    yellow: "#c8bc45"
+    blue: "#8fa7b9"
+    magenta: "#bd89de"
+    cyan: "#6ec2a8"
+    white: "#dad3d3"
+theme: Astromouse
